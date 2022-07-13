@@ -36,8 +36,9 @@ class MyColors
   static Color grey10 = Color(0xffe6e6e6);
   static Color grey30 = Color(0xff909090);
   static Color grey60 = Color(0xff666666);
-  static Color grey80 = Color(0xff37474F);
-  static Color grey90 = Color(0xff263238);
+  static Color grey80 = Color(0xff444444);
+  static Color grey90 = Color(0xff37474F);
+  static Color grey95 = Color(0xff263238);
 
 
   static Color red300 = Color(0xffE57373);

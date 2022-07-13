@@ -38,18 +38,17 @@ class _SplashScreenState extends State<SplashScreen> {
   }
   Future<void> taketo() async {
     sharedPreferences = await SharedPreferences.getInstance();
-    if (sharedPreferences?.getString("status") == "logged in") {
+    // if (sharedPreferences?.getString("status") == "logged in") {
       Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (BuildContext context) => Home()),
               (Route<dynamic> route) => false);
-    } else {
-      Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-              builder: (BuildContext context) =>
-                  Home(
-                  )),
-              (Route<dynamic> route) => false);
-    }
+    // } else {
+    //   Navigator.of(context).pushAndRemoveUntil(
+    //       MaterialPageRoute(
+    //           builder: (BuildContext context) =>
+    //               Login()),
+    //           (Route<dynamic> route) => false);
+    // }
   }
 
   @override

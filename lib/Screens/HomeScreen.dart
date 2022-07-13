@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shop24u/LoginPopUp.dart';
+import 'package:shop24u/Screens/Login.dart';
+import 'package:shop24u/Screens/ProductDetails.dart';
 import 'package:shop24u/Screens/ProductList.dart';
 import 'package:shop24u/model/CategoryResponse.dart';
 import 'package:shop24u/model/ProductResponse.dart';
+import 'package:shop24u/model/Response.dart';
 import 'package:shop24u/size/MySize.dart';
 
 import '../../api/APIService.dart';
@@ -21,17 +25,24 @@ class _HomeScreenState extends State<HomeScreen> {
   // List<DeliveryTypeData> deliveryType = [];
   List<CategoryData> category = [];
   List<ProductData> product = [];
+  List<ProductData> newArrival = [];
   // List<BannerData> we_set_us = [];
   // List<Widget> slideShow;
   // List<Widget> stories;
 
-  SharedPreferences? sharedPreferences;
+  late SharedPreferences sharedPreferences;
 
   @override
   void initState() {
     load = false;
     // slideShow = [];
     // stories = [];
+    start();
+  }
+
+  start() async {
+    sharedPreferences = await SharedPreferences.getInstance();
+
     getCategory();
   }
 
@@ -253,7 +264,107 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
+          GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                mainAxisExtent: MySize.sizeh30(context)
+            ),
+            shrinkWrap: true,
+            scrollDirection: Axis.vertical,
+            itemCount: newArrival.length,
+            itemBuilder: (BuildContext context, index){
+              return getNewArrivalDesign(newArrival[index]);
+            },
+          )
         ],
+      ),
+    );
+  }
+
+  getNewArrivalDesign(ProductData product) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ProductDetails(
+          id: (product.id??"").toString(),
+          name: product.name??"",
+        )
+        )
+        );
+      },
+      child: Container(
+        color: MyColors.white,
+        padding: EdgeInsets.symmetric(horizontal: MySize.size2(context), vertical: MySize.sizeh2(context)),
+        child: Column(
+          children: [
+            Container(
+              height: MySize.sizeh10(context),
+              padding: EdgeInsets.only(bottom: MySize.sizeh2(context)),
+              child: (product.images?.length??0)>0 ? Image.network(
+                product.images?[0]?.src??"",
+                fit: BoxFit.fill,
+                errorBuilder: (BuildContext context, obj, stack) {
+                  return const Icon(
+                      Icons.category
+                  );
+                },
+              ) : Icon(
+                  Icons.category
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: MySize.sizeh1(context)),
+              child: Text(
+                product.name??"",
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: MySize.font13(context)
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: MySize.sizeh1(context)),
+              child: Text(
+                "${Environment.rupee} ${product.price??""}",
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: MySize.font15(context)
+                ),
+              ),
+            ),
+            Container(
+              height: MySize.sizeh3_5(context),
+              margin: EdgeInsets.only(top: MySize.sizeh1(context), right: MySize.size3(context), left: MySize.size3(context)),
+              width: MediaQuery.of(context).size.width,
+              child: ElevatedButton(
+                  onPressed: () {
+                    print("hello");
+                    if(sharedPreferences?.getString("status") == "logged in") {
+                      addToCart(product);
+                    }
+                    else {
+                      loginPopUp();
+                    }
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(MyColors.colorSecondary),
+                  ),
+                  child: Text(
+                    "ADD TO CART",
+                    style: TextStyle(
+                        color: MyColors.white,
+                        fontSize: MySize.font11(context)
+                    ),
+                  )
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -290,7 +401,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget getCategoryDesign(CategoryData category, int index) {
-    print(category.toJson());
     return SizedBox(
       width: MySize.size18(context),
       child: Column(
@@ -353,7 +463,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget getExploreDesign(ProductData product, int index) {
-    print(product.toJson());
     return SizedBox(
       width: MySize.size25(context),
       child: Column(
@@ -361,6 +470,12 @@ class _HomeScreenState extends State<HomeScreen> {
           GestureDetector(
             onTap: ()
             {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => ProductDetails(
+                id: (product.id??"").toString(),
+                name: product.name??"",
+              )
+              )
+              );
               // Navigator.push(context, MaterialPageRoute(builder: (context) => Products(
               //       id: category.id??"",
               //       name: category.name??"",
@@ -501,10 +616,60 @@ class _HomeScreenState extends State<HomeScreen> {
     ProductListResponse productListResponse = await APIService().getProduct();
     product = productListResponse.status??true ? productListResponse.data??[] : [];
 
+    getNewArrivals();
+  }
+
+  getNewArrivals() async {
+    ProductListResponse productListResponse = await APIService().getNewArrivals();
+    newArrival = productListResponse.status??true ? productListResponse.data??[] : [];
+
     load = true;
     setState(() {
 
     });
+  }
+
+  addToCart(ProductData product) async {
+    Map<String, dynamic> data = {
+      "customer_id" : sharedPreferences.getString("id"),
+      "product_id" : product.id??"",
+      "product_name" : product.name??"",
+      "qty" : "1",
+      "amount" : product.price??"0",
+      "product_image" : (product.images?.length??0)>0 ? product?.images![0].src??"" : "",
+    };
+    print(data);
+
+    Response response = await APIService().addToCart(data);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(response.data??"")));
+
+  }
+
+  loginPopUp() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return LoginPopUp();
+      },
+    ).then((value) {
+      if(value=="login")
+        logout();
+    });
+  }
+
+  Future<void> logout() async {
+    sharedPreferences?.setString("status", "logged out");
+    sharedPreferences?.setString("id", "");
+    sharedPreferences?.setString("name", "");
+    sharedPreferences?.setString("email", "");
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (context) => Login()),
+            (Route<dynamic> route) => false
+    );
   }
 
   // Future<void> addToCart(int ind) async {

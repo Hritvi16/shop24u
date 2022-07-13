@@ -7,6 +7,7 @@ import 'package:email_validator/email_validator.dart';
 import 'package:shop24u/Screens/Home.dart';
 import 'package:shop24u/Screens/Signup.dart';
 import 'package:shop24u/colors/MyColors.dart';
+import 'package:shop24u/model/LoginResponse.dart';
 import 'package:shop24u/size/MySize.dart';
 
 import '../api/APIService.dart';
@@ -203,28 +204,27 @@ class _LoginState extends State<Login> {
   //Call login api
   void login() async {
     Map<String, dynamic> data = new Map();
-    data['email'] = email.text;
+    data['username'] = email.text;
     data['password'] = password.text;
     print("LoginData $data");
 
-    // LoginResponse loginResponse = await APIService().login(data);
+    LoginResponse loginResponse = await APIService().login(data);
     // print(loginResponse.message);
     // print(loginResponse.toJson());
     // print(loginResponse.data?.first.accessToken??"");
-    // if (loginResponse.message == "Successfully Login") {
-    //   sharedPreferences = await SharedPreferences.getInstance();
-    //   sharedPreferences?.setString("token", loginResponse.data?.first.accessToken??"");
-    //   sharedPreferences?.setString("name", loginResponse.data?.first.name??"");
-    //   sharedPreferences?.setString("mobile", loginResponse.data?.first.mobile??"");
-    //   sharedPreferences?.setString("email", loginResponse.data?.first.email??"");
+    if (loginResponse?.status??false) {
+      sharedPreferences = await SharedPreferences.getInstance();
+      sharedPreferences?.setString("id", (loginResponse.data?.id??"").toString());
+      sharedPreferences?.setString("name", loginResponse.data?.data?.displayName??"");
+      sharedPreferences?.setString("email", loginResponse.data?.data?.userEmail??"");
       sharedPreferences?.setString("status", "logged in");
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => Home()));
-    // } else {
-    //   ScaffoldMessenger.of(context)
-    //       .showSnackBar(SnackBar(content: Text(loginResponse.message??"")));
-    //   print(loginResponse.message);
-    // }
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Please, try again later")));
+      // print(loginResponse.message);
+    }
   }
 
   //validation

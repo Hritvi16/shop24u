@@ -1,9 +1,14 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shop24u/LoginPopUp.dart';
+import 'package:shop24u/Screens/Login.dart';
+import 'package:shop24u/Screens/MyCart.dart';
 import 'package:shop24u/api/APIService.dart';
 import 'package:shop24u/api/Environment.dart';
 import 'package:shop24u/colors/MyColors.dart';
 import 'package:shop24u/model/ProductResponse.dart';
+import 'package:shop24u/model/Response.dart';
 import 'package:shop24u/size/MySize.dart';
 
 class ProductDetails extends StatefulWidget {
@@ -19,19 +24,27 @@ class _ProductDetailsState extends State<ProductDetails> {
   String name = "";
   bool load = false;
   ProductData product = ProductData();
+  List<ProductData> similar = [];
 
   List<Widget> slideShow = [];
   int qty = 1;
 
   final CarouselController _controller = CarouselController();
   int _current = 0;
+  late SharedPreferences sharedPreferences;
   @override
   void initState() {
     id = widget.id;
     name = widget.name;
 
-    getProductDetails();
+    start();
     super.initState();
+  }
+
+  start() async {
+    sharedPreferences = await SharedPreferences.getInstance();
+
+    getProductDetails();
   }
 
   @override
@@ -51,25 +64,18 @@ class _ProductDetailsState extends State<ProductDetails> {
         iconTheme:IconThemeData(color: MyColors.black),
         actions: <Widget>[
           Padding(
-            padding: EdgeInsets.only(right: MySize.size3(context)),
-            child: GestureDetector(
-              onTap: () {
-
-              },
-              child: Icon(
-                Icons.search,
-                color: Colors.black,
-                size: MySize.sizeh4(context),
-              ),
-            ),
-          ),
-          Padding(
             padding: EdgeInsets.only(right: MySize.size2(context)),
             child: GestureDetector(
               onTap: () {
-                // Navigator.push(context, MaterialPageRoute(builder: (context) =>
-                //     MyCart())
-                // );
+                if(sharedPreferences?.getString("status") == "logged in") {
+                  Navigator.push(
+                      context, MaterialPageRoute(builder: (context) =>
+                      MyCart())
+                  );
+                }
+                else {
+                  loginPopUp();
+                }
               },
               child: Icon(
                 Icons.shopping_bag_outlined,
@@ -126,6 +132,7 @@ class _ProductDetailsState extends State<ProductDetails> {
                       ),
                     ),
                   ),
+                  getSimilarProductDesignBody()
                 ]
             ),
           )
@@ -133,6 +140,111 @@ class _ProductDetailsState extends State<ProductDetails> {
           : Center(
         child: CircularProgressIndicator(
           color: MyColors.colorPrimary,
+        ),
+      ),
+    );
+  }
+
+  getSimilarProductDesignBody() {
+    return Container(
+      color: MyColors.grey10,
+      child: GridView.builder(
+        shrinkWrap: true,
+        scrollDirection: Axis.vertical,
+        itemCount: similar.length,
+        physics: NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: MySize.size02(context),
+            mainAxisSpacing: MySize.sizeh02(context),
+            mainAxisExtent: MySize.sizeh30(context)
+        ),
+        itemBuilder: (BuildContext ctx, index) {
+          return getSimilarProductDesign(similar[index], index);
+        },
+      ),
+    );
+  }
+
+  getSimilarProductDesign(ProductData product, int index) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ProductDetails(
+          id: (product.id??"").toString(),
+          name: product.name??"",
+        )
+        )
+        );
+      },
+      child: Container(
+        color: MyColors.white,
+        padding: EdgeInsets.symmetric(horizontal: MySize.size5(context), vertical: MySize.sizeh2(context)),
+        child: Column(
+          children: [
+            Container(
+              height: MySize.sizeh10(context),
+              padding: EdgeInsets.only(bottom: MySize.sizeh2(context)),
+              child: Image.network(
+                product.images?[0]?.src??"",
+                fit: BoxFit.fill,
+                errorBuilder: (BuildContext context, obj, stack) {
+                  return const Icon(
+                      Icons.category
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: MySize.sizeh1(context)),
+              child: Text(
+                product.name??"",
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: MySize.font13(context)
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: MySize.sizeh1(context)),
+              child: Text(
+                "${Environment.rupee} ${product.price??""}",
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    fontSize: MySize.font15(context)
+                ),
+              ),
+            ),
+            Container(
+              height: MySize.sizeh3_5(context),
+              margin: EdgeInsets.only(top: MySize.sizeh1(context), right: MySize.size3(context), left: MySize.size3(context)),
+              width: MediaQuery.of(context).size.width,
+              child: ElevatedButton(
+                  onPressed: () {
+                    print("hello");
+                    if(sharedPreferences?.getString("status") == "logged in") {
+                      addToCart(product);
+                    }
+                    else {
+                      loginPopUp();
+                    }
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(MyColors.colorSecondary),
+                  ),
+                  child: Text(
+                    "ADD TO CART",
+                    style: TextStyle(
+                        color: MyColors.white,
+                        fontSize: MySize.font11(context)
+                    ),
+                  )
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -188,10 +300,24 @@ class _ProductDetailsState extends State<ProductDetails> {
     Map<String, dynamic> data = {
       "id" : id
     };
+    print(data);
 
     ProductResponse productResponse = await APIService().getProductDetails(data);
     product = productResponse.status??true ? productResponse.data??ProductData() : ProductData();
 
+    getRelatedProducts();
+  }
+
+  getRelatedProducts() async {
+    Map<String, dynamic> data = {
+      "related_ids" : id
+    };
+    print(data);
+
+    ProductListResponse productListResponse = await APIService().getSimilarProduct(data);
+    similar = productListResponse.status??true ? productListResponse.data??[] : [];
+
+    print("hehh");
     setState(() {
 
     });
@@ -397,10 +523,12 @@ class _ProductDetailsState extends State<ProductDetails> {
               height: MySize.sizeh6(context),
               child: ElevatedButton(
                   onPressed: () {
-                    print("hello");
-                    // if (validate() == 0) {
-                    //   login();
-                    // }
+                    if(sharedPreferences?.getString("status") == "logged in") {
+                      addToCart(product);
+                    }
+                    else {
+                      loginPopUp();
+                    }
                   },
                   style: ButtonStyle(
                     backgroundColor: MaterialStateProperty.all(MyColors.colorSecondary),
@@ -447,4 +575,49 @@ class _ProductDetailsState extends State<ProductDetails> {
       ),
     );
   }
+
+  addToCart(ProductData product) async {
+    Map<String, dynamic> data = {
+      "customer_id" : sharedPreferences.getString("id"),
+      "product_id" : id,
+      "product_name" : product.name??"",
+      "qty" : qty.toString(),
+      "amount" : product.price??"0",
+      "product_image" : (product.images?.length??0)>0 ? product?.images![0].src??"" : "",
+    };
+    print(data);
+
+    Response response = await APIService().addToCart(data);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(response.data??"")));
+
+  }
+
+  loginPopUp() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return LoginPopUp();
+      },
+    ).then((value) {
+      if(value=="login")
+        logout();
+    });
+  }
+
+  Future<void> logout() async {
+    sharedPreferences?.setString("status", "logged out");
+    sharedPreferences?.setString("id", "");
+    sharedPreferences?.setString("name", "");
+    sharedPreferences?.setString("email", "");
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (context) => Login()),
+            (Route<dynamic> route) => false
+    );
+  }
+
+
 }

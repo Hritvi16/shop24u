@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shop24u/LoginPopUp.dart';
+import 'package:shop24u/Screens/Login.dart';
+import 'package:shop24u/Screens/MyCart.dart';
 import 'package:shop24u/Screens/ProductDetails.dart';
 import 'package:shop24u/api/APIConstant.dart';
 import 'package:shop24u/api/APIService.dart';
 import 'package:shop24u/api/Environment.dart';
 import 'package:shop24u/colors/MyColors.dart';
 import 'package:shop24u/model/ProductResponse.dart';
+import 'package:shop24u/model/Response.dart';
 import 'package:shop24u/size/MySize.dart';
 
 class ProductList extends StatefulWidget {
@@ -21,14 +26,22 @@ class _ProductListState extends State<ProductList> {
   bool load = false;
   List<ProductData> product = [];
 
+  late SharedPreferences sharedPreferences;
+
   @override
   void initState() {
     id = widget.id;
     name = widget.name;
 
-    getProduct();
     super.initState();
   }
+
+  start() async {
+    sharedPreferences = await SharedPreferences.getInstance();
+
+    getProduct();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,9 +75,15 @@ class _ProductListState extends State<ProductList> {
             padding: EdgeInsets.only(right: MySize.size2(context)),
             child: GestureDetector(
               onTap: () {
-                // Navigator.push(context, MaterialPageRoute(builder: (context) =>
-                //     MyCart())
-                // );
+                if(sharedPreferences?.getString("status") == "logged in") {
+                  Navigator.push(
+                      context, MaterialPageRoute(builder: (context) =>
+                      MyCart())
+                  );
+                }
+                else {
+                  loginPopUp();
+                }
               },
               child: Icon(
                 Icons.shopping_bag_outlined,
@@ -182,9 +201,12 @@ class _ProductListState extends State<ProductList> {
               child: ElevatedButton(
                   onPressed: () {
                     print("hello");
-                    // if (validate() == 0) {
-                    //   login();
-                    // }
+                    if(sharedPreferences?.getString("status") == "logged in") {
+                      addToCart(product);
+                    }
+                    else {
+                      loginPopUp();
+                    }
                   },
                   style: ButtonStyle(
                     backgroundColor: MaterialStateProperty.all(MyColors.colorSecondary),
@@ -219,5 +241,50 @@ class _ProductListState extends State<ProductList> {
 
     });
   }
+
+
+  addToCart(ProductData product) async {
+    Map<String, dynamic> data = {
+      "customer_id" : sharedPreferences.getString("id"),
+      "product_id" : product.id??"",
+      "product_name" : product.name??"",
+      "qty" : "1",
+      "amount" : product.price??"0",
+      "product_image" : (product.images?.length??0)>0 ? product?.images![0].src??"" : "",
+    };
+    print(data);
+
+    Response response = await APIService().addToCart(data);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(response.data??"")));
+
+  }
+
+  loginPopUp() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return LoginPopUp();
+      },
+    ).then((value) {
+      if(value=="login")
+        logout();
+    });
+  }
+
+  Future<void> logout() async {
+    sharedPreferences?.setString("status", "logged out");
+    sharedPreferences?.setString("id", "");
+    sharedPreferences?.setString("name", "");
+    sharedPreferences?.setString("email", "");
+    Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+            builder: (context) => Login()),
+            (Route<dynamic> route) => false
+    );
+  }
+
 
 }

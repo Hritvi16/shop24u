@@ -1,23 +1,29 @@
 import 'dart:convert';
+import 'package:shop24u/api/Environment.dart';
+import 'package:shop24u/model/CartResponse.dart';
 import 'package:shop24u/model/CategoryResponse.dart';
+import 'package:shop24u/model/LoginResponse.dart';
 import 'package:shop24u/model/ProductResponse.dart';
+import 'package:shop24u/model/Response.dart';
 import 'package:shop24u/model/SignUpResponse.dart';
 
 import 'APIConstant.dart';
 import 'package:http/http.dart' as http;
 
 class APIService {
-  // Future<LoginResponse> login(Map<String, dynamic> data) async {
-  //   String url = APIConstant.login;
-  //   var result = await http.post(Uri.parse(url), body: data);
-  //   var response = jsonDecode(result.body);
-  //   LoginResponse loginResponse = LoginResponse.fromJson(response);
-  //   return loginResponse;
-  // }
-  //
+  Future<LoginResponse> login(Map<String, dynamic> data) async {
+    var url = Uri.http(Environment.loginUrl, Environment.loginApi+APIConstant.login, data);
+    print(url.path);
+    var result = await http.get(url);
+    print(result.body);
+    var response = jsonDecode(result.body);
+    LoginResponse loginResponse = LoginResponse.fromJson(response);
+    return loginResponse;
+  }
+
   Future<SignUpResponse> signup(Map<String, dynamic> data) async {
     String url = APIConstant.signup;
-    var result = await http.post(Uri.parse(url), body: data);
+    var result = await http.get(Uri.parse(url));
     // print(result.body);
     var response = jsonDecode(result.body);
     SignUpResponse signUpResponse = SignUpResponse.fromJson(response);
@@ -27,11 +33,20 @@ class APIService {
   Future<CategoryResponse> getCategories() async {
     String url = APIConstant.categories;
     var result = await http.get(Uri.parse(url));
+    print(result.body);
     var response = jsonDecode(result.body);
     CategoryResponse categoryResponse = CategoryResponse.fromJson(response);
     return categoryResponse;
   }
 
+  Future<ProductListResponse> getNewArrivals() async {
+    String url = APIConstant.newArrival;
+    var result = await http.get(Uri.parse(url));
+    var response = jsonDecode(result.body);
+    print("new arrival");
+    ProductListResponse productListResponse = ProductListResponse.fromJson(response);
+    return productListResponse;
+  }
   Future<ProductListResponse> getProduct() async {
     String url = APIConstant.products;
     var result = await http.get(Uri.parse(url));
@@ -50,13 +65,39 @@ class APIService {
 
   Future<ProductResponse> getProductDetails(Map<String, dynamic> data) async {
     String url = APIConstant.product;
+    var result = await http.post(Uri.parse(url), body: data);
+    var response = jsonDecode(result.body);
+    ProductResponse productResponse = ProductResponse.fromJson(response);
+    return productResponse;
+  }
+
+  Future<ProductListResponse> getSimilarProduct(Map<String, dynamic> data) async {
+    String url = APIConstant.similarProduct;
+    print("url");
     print(url);
     var result = await http.post(Uri.parse(url), body: data);
     var response = jsonDecode(result.body);
-    print("response");
-    print(response);
-    ProductResponse productResponse = ProductResponse.fromJson(response);
-    return productResponse;
+    print(result.body);
+    ProductListResponse productListResponse = ProductListResponse.fromJson(response);
+    return productListResponse;
+  }
+
+  Future<Response> addToCart(Map<String, dynamic> data) async {
+    String url = APIConstant.addCart;
+    print("url");
+    print(url);
+    var result = await http.post(Uri.parse(url), body: data);
+    Response response = Response.fromJson(jsonDecode(result.body));
+    return response;
+  }
+
+  Future<CartResponse> getCart(Map<String, dynamic> data) async {
+    String url = APIConstant.viewCart;
+    print("url");
+    print(url);
+    var result = await http.post(Uri.parse(url), body: data);
+    CartResponse cartResponse = CartResponse.fromJson(jsonDecode(result.body));
+    return cartResponse;
   }
   //
   // Future<SubCatResponse> getSubCategories(Map<String, dynamic> data) async {

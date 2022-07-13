@@ -231,9 +231,7 @@ class ProductData {
     _dateOnSaleToGmt = dateOnSaleToGmt;
     _onSale = onSale;
     _purchasable = purchasable;
-    _totalSales = totalSales;
     _virtual = virtual;
-    _downloadable = downloadable;
     _downloads = downloads;
     _downloadLimit = downloadLimit;
     _downloadExpiry = downloadExpiry;
@@ -280,8 +278,6 @@ class ProductData {
 }
 
   ProductData.fromJson(dynamic json) {
-    print(json);
-    print(json['id']);
     _id = json['id'].toString();
     _name = json['name'];
     _slug = json['slug'];
@@ -306,9 +302,7 @@ class ProductData {
     _dateOnSaleToGmt = json['date_on_sale_to_gmt'];
     _onSale = json['on_sale'];
     _purchasable = json['purchasable'];
-    _totalSales = json['total_sales'];
     _virtual = json['virtual'];
-    _downloadable = json['downloadable'];
     _downloadLimit = json['download_limit'];
     _downloadExpiry = json['download_expiry'];
     _externalUrl = json['external_url'];
@@ -390,9 +384,7 @@ class ProductData {
   dynamic _dateOnSaleToGmt;
   bool? _onSale;
   bool? _purchasable;
-  int? _totalSales;
   bool? _virtual;
-  bool? _downloadable;
   List<dynamic>? _downloads;
   int? _downloadLimit;
   int? _downloadExpiry;
@@ -461,9 +453,7 @@ class ProductData {
   dynamic get dateOnSaleToGmt => _dateOnSaleToGmt;
   bool? get onSale => _onSale;
   bool? get purchasable => _purchasable;
-  int? get totalSales => _totalSales;
   bool? get virtual => _virtual;
-  bool? get downloadable => _downloadable;
   List<dynamic>? get downloads => _downloads;
   int? get downloadLimit => _downloadLimit;
   int? get downloadExpiry => _downloadExpiry;
@@ -534,9 +524,7 @@ class ProductData {
     map['date_on_sale_to_gmt'] = _dateOnSaleToGmt;
     map['on_sale'] = _onSale;
     map['purchasable'] = _purchasable;
-    map['total_sales'] = _totalSales;
     map['virtual'] = _virtual;
-    map['downloadable'] = _downloadable;
     if (_downloads != null) {
       map['downloads'] = _downloads?.map((v) => v.toJson()).toList();
     }
